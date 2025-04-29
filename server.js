@@ -13,13 +13,14 @@ const app = express();
 app.use(express.json());  // Parse incoming requests with JSON payloads
 app.use('/uploads', express.static('uploads'));  // Serve static files from 'uploads' directory
 
-// CORS setup - Allow only frontend domain for security
-const corsOptions = {
-  origin: 'http://localhost:5173',  // Allow only requests from localhost:5173
-  credentials: true,  // Enable cookies and authentication headers to be sent with requests
-};
-app.use(cors(corsOptions));
 
+
+const corsOptions = {
+  origin: ['http://localhost:5173'], // Allow only frontend origin
+  credentials: true, // Allow cookies/auth headers
+};
+
+app.use(cors(corsOptions));
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/properties', propertyRoutes);
