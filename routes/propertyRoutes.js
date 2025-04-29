@@ -1,20 +1,23 @@
-const router = require('express').Router();
-const auth = require('../middleware/authMiddleware');
-const multer = require('multer');
-const upload = multer({ dest: 'uploads/' });
-
+const express = require('express');
+const router = express.Router();
 const {
+  getAllProperties,
+  getPropertyById,
   createProperty,
-  getProperties,
-  getProperty,
   updateProperty,
   deleteProperty
 } = require('../controllers/propertyController');
 
-router.get('/', getProperties);
-router.get('/:id', getProperty);
-router.post('/', auth, upload.single('image'), createProperty);
-router.put('/:id', auth, upload.single('image'), updateProperty);
-router.delete('/:id', auth, deleteProperty);
+const upload = require('../middleware/uploadMiddleware');
+const authMiddleware = require('../middleware/authMiddleware');
+
+// Public routes
+router.get('/', getAllProperties);
+router.get('/:id', getPropertyById);
+
+// Protected routes
+router.post('/', authMiddleware, upload.single('image'), createProperty);
+router.put('/:id', authMiddleware, upload.single('image'), updateProperty);
+router.delete('/:id', authMiddleware, deleteProperty);
 
 module.exports = router;

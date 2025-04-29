@@ -1,67 +1,108 @@
 const Property = require('../models/Property');
+const path = require('path');
 const fs = require('fs');
 
-exports.createProperty = async (req, res) => {
+const getAllProperties = async (req, res) => {
   try {
-    const property = await Property.create({
-      ...req.body,
-      image: req.file?.path,
-      postedBy: req.user.id
+    const properties = await Property.find().populate('createdBy', 'username email');
+    res.status(200).json(properties);
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to fetch properties' });
+  }
+};
+
+const getPropertyById = async (req, res) => {
+  try {
+    const property = await Property.findById(req.params.id);
+    if (!property) return res.status(404).json({ message: 'Property not found' });
+    res.status(200).json(property);
+  } catch (err) {
+    res.status(500).json({ message: 'Error retrieving property' });
+  }
+};
+
+const createProperty = async (req, res) => {
+  const { title, description, price, address } = req.body;
+
+  if (!req.file) {
+    return res.status(400).json({ message: 'Image is required' });
+  }
+
+  try {
+    const newProperty = new Property({
+      title,
+      description,
+      price,
+      address,
+      image: req.file.path, // Local path to uploaded image
+      createdBy: req.user.id
     });
-    res.status(201).json(property);
+
+    await newProperty.save();
+    res.status(201).json({ message: 'Property created', property: newProperty });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ message: 'Failed to create property' });
   }
 };
 
-exports.getProperties = async (req, res) => {
-  const properties = await Property.find().populate('postedBy', 'username');
-  res.json(properties);
-};
+const updateProperty = async (req, res) => {
+  const { title, description, price, address } = req.body;
+  const { id } = req.params;
 
-exports.getProperty = async (req, res) => {
   try {
-    const property = await Property.findById(req.params.id).populate('postedBy', 'username');
-    if (!property) return res.status(404).json({ error: 'Property not found' });
-    res.json(property);
+    const property = await Property.findById(id);
+    if (!property) return res.status(404).json({ message: 'Property not found' });
+
+    if (req.user.id !== property.createdBy.toString()) {
+      return res.status(403).json({ message: 'Not authorized to update this property' });
+    }
+
+    if (req.file) {
+      // Delete old image
+      if (fs.existsSync(property.image)) {
+        fs.unlinkSync(property.image);
+      }
+      property.image = req.file.path;
+    }
+
+    property.title = title || property.title;
+    property.description = description || property.description;
+    property.price = price || property.price;
+    property.address = address || property.address;
+
+    await property.save();
+    res.status(200).json({ message: 'Property updated', property });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ message: 'Failed to update property' });
   }
 };
 
-exports.updateProperty = async (req, res) => {
+const deleteProperty = async (req, res) => {
+  const { id } = req.params;
+
   try {
-    const property = await Property.findById(req.params.id);
-    if (!property) return res.status(404).json({ error: 'Not found' });
-    if (property.postedBy.toString() !== req.user.id)
-      return res.status(403).json({ error: 'Unauthorized' });
+    const property = await Property.findById(id);
+    if (!property) return res.status(404).json({ message: 'Property not found' });
 
-    if (req.file && property.image) fs.unlinkSync(property.image); // delete old image
+    if (req.user.id !== property.createdBy.toString()) {
+      return res.status(403).json({ message: 'Not authorized to delete this property' });
+    }
 
-    const updatedData = {
-      ...req.body,
-      image: req.file ? req.file.path : property.image
-    };
+    if (fs.existsSync(property.image)) {
+      fs.unlinkSync(property.image);
+    }
 
-    const updated = await Property.findByIdAndUpdate(req.params.id, updatedData, { new: true });
-    res.json(updated);
+    await property.deleteOne();
+    res.status(200).json({ message: 'Property deleted' });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ message: 'Failed to delete property' });
   }
 };
 
-exports.deleteProperty = async (req, res) => {
-  try {
-    const property = await Property.findById(req.params.id);
-    if (!property) return res.status(404).json({ error: 'Not found' });
-    if (property.postedBy.toString() !== req.user.id)
-      return res.status(403).json({ error: 'Unauthorized' });
-
-    if (property.image) fs.unlinkSync(property.image); // delete image
-    await property.remove();
-
-    res.json({ message: 'Property deleted' });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+module.exports = {
+  getAllProperties,
+  getPropertyById,
+  createProperty,
+  updateProperty,
+  deleteProperty
 };
