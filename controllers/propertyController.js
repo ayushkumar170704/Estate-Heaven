@@ -1,5 +1,6 @@
 const Property = require('../models/Property');
-const cloudinary = require('cloudinary').v2;
+const path = require('path');
+const fs = require('fs');
 
 const getAllProperties = async (req, res) => {
   try {
@@ -23,23 +24,18 @@ const getPropertyById = async (req, res) => {
 const createProperty = async (req, res) => {
   const { title, description, price, address } = req.body;
 
-  if (!req.files || !req.files.image) {
+  if (!req.file) {
     return res.status(400).json({ message: 'Image is required' });
   }
 
   try {
-    // Upload image to Cloudinary
-    const result = await cloudinary.uploader.upload(req.files.image.tempFilePath, {
-      folder: 'properties',
-    });
-
     const newProperty = new Property({
       title,
       description,
       price,
       address,
-      image: result.secure_url, // Store Cloudinary URL
-      createdBy: req.user.id,
+      image: req.file.path, // Local path to uploaded image
+      createdBy: req.user.id
     });
 
     await newProperty.save();
@@ -61,12 +57,12 @@ const updateProperty = async (req, res) => {
       return res.status(403).json({ message: 'Not authorized to update this property' });
     }
 
-    // Update image if provided
-    if (req.files && req.files.image) {
-      const result = await cloudinary.uploader.upload(req.files.image.tempFilePath, {
-        folder: 'properties',
-      });
-      property.image = result.secure_url; // Replace old image URL
+    if (req.file) {
+      // Delete old image
+      if (fs.existsSync(property.image)) {
+        fs.unlinkSync(property.image);
+      }
+      property.image = req.file.path;
     }
 
     property.title = title || property.title;
@@ -92,6 +88,10 @@ const deleteProperty = async (req, res) => {
       return res.status(403).json({ message: 'Not authorized to delete this property' });
     }
 
+    if (fs.existsSync(property.image)) {
+      fs.unlinkSync(property.image);
+    }
+
     await property.deleteOne();
     res.status(200).json({ message: 'Property deleted' });
   } catch (err) {
@@ -104,5 +104,5 @@ module.exports = {
   getPropertyById,
   createProperty,
   updateProperty,
-  deleteProperty,
+  deleteProperty
 };

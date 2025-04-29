@@ -2,30 +2,25 @@ const express = require('express');
 const mongoose = require('mongoose');
 const dotenv = require('dotenv');
 const cors = require('cors');
-const fileUpload = require('express-fileupload');
-const cloudinary = require('cloudinary').v2;
 
 const authRoutes = require('./routes/authRoutes');
 const propertyRoutes = require('./routes/propertyRoutes');
 
-dotenv.config(); // Load environment variables
+dotenv.config();
 const app = express();
 
-// Cloudinary configuration
-cloudinary.config({
-  cloud_name: 'dgmc2nxhl',
-  api_key:'124167469576942',
-  api_secret: 'nb-W01d3LlHuoaN_wMece5nhNQM',
-});
-
 // Middleware
-app.use(express.json()); // Parse incoming requests with JSON payloads
-app.use(fileUpload({ useTempFiles: true })); // Enable file uploads
-app.use(cors({
+app.use(express.json());  // Parse incoming requests with JSON payloads
+app.use('/uploads', express.static('uploads'));  // Serve static files from 'uploads' directory
+
+
+
+const corsOptions = {
   origin: ['http://localhost:5173'], // Allow only frontend origin
   credentials: true, // Allow cookies/auth headers
-}));
+};
 
+app.use(cors(corsOptions));
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/properties', propertyRoutes);
