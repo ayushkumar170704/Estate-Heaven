@@ -18,7 +18,7 @@ app.use('/uploads', express.static('uploads'));
 
 // Add this to your server.js or app.js file (where you initialize Express)
 const corsOptions = {
-  origin: '*', // Allow only the frontend's origin
+  origin: 'http://localhost:5173', // Allow only the frontend's origin
   credentials: true, // Allow credentials (cookies or authorization headers)
 };
 
